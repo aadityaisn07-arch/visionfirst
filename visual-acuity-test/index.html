@@ -1,0 +1,990 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="Open-source vision screening for NGO eye camps. Works offline on any phone or laptop.">
+<meta name="theme-color" content="#0E5F55">
+<title>VisionFirst — Vision Screening</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:      #FBFAF7;
+    --panel:      #FFFFFF;
+    --ink:        #14181A;
+    --ink-soft:   #5F6B6E;
+    --instrument: #0E5F55;
+    --instrument-tint: #E6F0EE;
+    --signal:     #B3620F;
+    --signal-tint:#FBF0E2;
+    --rule:       #DDE3E1;
+    --ok:         #1B6B47;
+
+    --fs-micro: 0.78rem;
+    --fs-body:  0.95rem;
+    --fs-lead:  1.05rem;
+    --fs-h2:    1.28rem;
+    --fs-h1:    1.75rem;
+    --fs-huge:  2.6rem;
+
+    --font: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  header.bar {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--instrument);
+    color: #EAF3F1;
+    padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 9px; }
+  .brand .mark { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.02em; }
+  .brand .sub { font-size: var(--fs-micro); opacity: 0.82; }
+  .bar-right { display: flex; align-items: center; gap: 8px; }
+  .chip {
+    font-size: var(--fs-micro);
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.08);
+    color: #EAF3F1;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .chip.live { border-color: #8FD6C6; background: rgba(143,214,198,0.18); }
+
+  main { max-width: 620px; margin: 0 auto; padding: 20px 16px 64px; }
+
+  section.card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 22px;
+    margin-bottom: 18px;
+  }
+
+  h1 { font-size: var(--fs-h1); line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px; font-weight: 800; }
+  h2 { font-size: var(--fs-h2); line-height: 1.25; letter-spacing: -0.015em; margin: 0 0 10px; font-weight: 700; }
+  h3 { font-size: var(--fs-body); margin: 18px 0 8px; font-weight: 700; }
+  p  { margin: 0 0 12px; color: var(--ink-soft); font-size: var(--fs-body); max-width: 62ch; }
+
+  .step-head { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+  .step-num {
+    flex: none;
+    width: 27px; height: 27px; border-radius: 50%;
+    background: var(--instrument); color: #fff;
+    display: grid; place-items: center;
+    font-size: 0.82rem; font-weight: 700;
+  }
+  .step-head h2 { margin: 0; }
+
+  label { display: block; margin: 14px 0 5px; font-size: var(--fs-body); font-weight: 600; }
+  .help { font-size: var(--fs-micro); color: var(--ink-soft); margin-top: 5px; line-height: 1.5; }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%; padding: 11px 12px;
+    border: 1px solid var(--rule); border-radius: 4px;
+    background: #fff; color: var(--ink);
+    font-family: inherit; font-size: var(--fs-body);
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--instrument); outline-offset: 2px;
+  }
+
+  button {
+    font-family: inherit; font-size: var(--fs-body); font-weight: 600;
+    border: none; border-radius: 4px; cursor: pointer;
+    padding: 13px 16px;
+  }
+  .btn-primary { background: var(--instrument); color: #fff; width: 100%; margin-top: 20px; }
+  .btn-quiet {
+    background: #fff; color: var(--instrument);
+    border: 1px solid var(--instrument); width: 100%; margin-top: 9px;
+  }
+  .btn-link {
+    background: none; color: var(--instrument); padding: 6px 0;
+    text-decoration: underline; width: auto; font-weight: 500;
+  }
+
+  .seg { display: flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .seg button {
+    flex: 1; background: #fff; color: var(--ink-soft);
+    border-radius: 0; padding: 11px 8px; font-weight: 600;
+  }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .seg button[aria-pressed="true"] { background: var(--instrument-tint); color: var(--instrument); }
+
+  .mode-list { display: grid; gap: 9px; margin-top: 6px; }
+  .mode {
+    text-align: left; background: #fff; border: 1px solid var(--rule);
+    border-radius: 5px; padding: 14px; width: 100%; cursor: pointer;
+  }
+  .mode[aria-pressed="true"] { border-color: var(--instrument); background: var(--instrument-tint); }
+  .mode .t { font-weight: 700; display: block; margin-bottom: 3px; color: var(--ink); }
+  .mode .d { font-size: var(--fs-micro); color: var(--ink-soft); line-height: 1.45; }
+
+  .note {
+    border-left: 3px solid var(--signal);
+    background: var(--signal-tint);
+    padding: 12px 14px; border-radius: 0 4px 4px 0;
+    font-size: var(--fs-micro); color: #6B3D08; line-height: 1.5;
+    margin-top: 16px;
+  }
+  .note strong { color: #5A3306; }
+
+  .checklist { list-style: none; padding: 0; margin: 10px 0 0; }
+  .checklist li {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 9px 0; border-bottom: 1px solid var(--rule);
+    font-size: var(--fs-body);
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist input { flex: none; width: 19px; height: 19px; margin-top: 2px; accent-color: var(--instrument); }
+  .checklist label { margin: 0; font-weight: 400; }
+
+  #card-shape {
+    background-color: var(--instrument);
+    border-radius: 6px;
+    position: relative;
+    margin: 14px 0 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  }
+  #card-shape::after {
+    content: "";
+    position: absolute; left: 7%; top: 46%;
+    width: 26%; height: 20%;
+    background: rgba(255,255,255,0.35);
+    border-radius: 2px;
+  }
+  input[type="range"] { width: 100%; accent-color: var(--instrument); margin-top: 8px; }
+  .cal-status {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: var(--fs-micro); color: var(--ink-soft);
+    border-top: 1px solid var(--rule); margin-top: 16px; padding-top: 12px;
+  }
+  .cal-status b { color: var(--ok); font-weight: 700; }
+
+  #stage {
+    display: none;
+    position: fixed; inset: 0; z-index: 50;
+    background: #FFFFFF;
+    flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 14px;
+  }
+  #stage-top {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    font-size: var(--fs-micro); color: #4A5558;
+  }
+  #stage-top button {
+    background: none; color: #4A5558; border: 1px solid #C9D2D0;
+    padding: 6px 11px; font-size: var(--fs-micro); border-radius: 3px;
+  }
+  #optotype { flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; }
+  #optotype svg { display: block; }
+
+  #interstitial {
+    display: none; flex: 1; width: 100%;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 20px; gap: 6px;
+  }
+  #interstitial .big { font-size: var(--fs-huge); font-weight: 800; color: var(--instrument); letter-spacing: -0.03em; }
+  #interstitial p { color: #4A5558; max-width: 34ch; }
+  #interstitial button { background: var(--instrument); color: #fff; padding: 14px 28px; margin-top: 10px; }
+
+  #pad {
+    width: 100%; max-width: 330px;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 9px; padding-bottom: 18px;
+  }
+  .key {
+    background: #F1F4F3; border: 2px solid #CBD5D2; border-radius: 8px;
+    height: 68px; display: grid; place-items: center;
+    font-size: 1.7rem; color: #14181A; user-select: none; cursor: pointer;
+  }
+  .key:active { background: var(--instrument-tint); border-color: var(--instrument); }
+  .key.wide { grid-column: span 3; height: 52px; font-size: var(--fs-body); font-weight: 600; color: var(--ink-soft); }
+
+  .verdict { font-size: var(--fs-huge); font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; margin: 2px 0 4px; }
+  .verdict.pass { color: var(--ok); }
+  .verdict.flag { color: var(--signal); }
+  .verdict-sub { color: var(--ink-soft); font-size: var(--fs-body); margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: var(--fs-body); }
+  th, td { text-align: left; padding: 9px 0; border-bottom: 1px solid var(--rule); }
+  th { color: var(--ink-soft); font-weight: 500; }
+  td { text-align: right; font-weight: 600; }
+
+  .log-row {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: var(--fs-body);
+  }
+  .log-row .who { font-weight: 600; }
+  .log-row .meta { font-size: var(--fs-micro); color: var(--ink-soft); }
+  .log-row .val { font-weight: 700; white-space: nowrap; }
+  .log-row .val.flag { color: var(--signal); }
+  .empty { color: var(--ink-soft); font-size: var(--fs-body); padding: 14px 0; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (max-width: 380px) { .key { height: 60px; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">
+    <span class="mark">VisionFirst</span>
+    <span class="sub" data-i="tagline">Field screening</span>
+  </div>
+  <div class="bar-right">
+    <button class="chip" id="cal-chip" type="button">Not calibrated</button>
+    <button class="chip" id="lang-chip" type="button">हिंदी</button>
+  </div>
+</header>
+
+<main>
+
+  <section class="card" id="sec-cal">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <h2 data-i="calTitle">Calibrate this screen</h2>
+    </div>
+    <p data-i="calIntro">Hold any bank, Aadhaar or ID card flat against the screen and resize the green rectangle until it matches the card exactly. Every such card is the same size worldwide, so this measures your screen more accurately than entering its specifications.</p>
+
+    <div id="card-shape"></div>
+    <input type="range" id="card-slider" min="120" max="900" value="320" step="1" aria-label="Resize to match your card">
+    <div class="help" data-i="calHelp">Match the width first. The height follows automatically.</div>
+
+    <button class="btn-primary" id="cal-save" type="button" data-i="calSave">Save calibration</button>
+    <button class="btn-link" id="cal-manual-toggle" type="button" data-i="calManual">No card handy? Enter screen size instead</button>
+
+    <div id="manual-wrap" style="display:none;">
+      <label for="diag" data-i="calDiag">Screen diagonal (inches)</label>
+      <input type="number" id="diag" step="0.1" min="3" max="32" placeholder="6.1 phone · 14 laptop">
+      <button class="btn-quiet" id="cal-save-manual" type="button" data-i="calSaveManual">Use this instead</button>
+    </div>
+
+    <div class="cal-status">
+      <span data-i="calStatusLabel">Current calibration</span>
+      <span id="cal-status-val">—</span>
+    </div>
+  </section>
+
+  <section class="card" id="sec-setup">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <h2 data-i="setupTitle">Patient and test</h2>
+    </div>
+
+    <label data-i="modeLabel">What are you screening for?</label>
+    <div class="mode-list">
+      <button class="mode" id="mode-acuity" type="button" aria-pressed="true">
+        <span class="t" data-i="modeAcuityT">Visual acuity</span>
+        <span class="d" data-i="modeAcuityD">Measures how small a shape the patient can identify at a fixed distance. Reports Snellen and logMAR.</span>
+      </button>
+      <button class="mode" id="mode-myopia" type="button" aria-pressed="false">
+        <span class="t" data-i="modeMyopiaT">Distance vision (myopia)</span>
+        <span class="d" data-i="modeMyopiaD">Finds the furthest distance the patient can still see a fixed shape. Flags likely uncorrected short-sightedness.</span>
+      </button>
+    </div>
+
+    <label for="pid" data-i="pidLabel">Patient name or camp ID</label>
+    <input type="text" id="pid" placeholder="Camp-014">
+
+    <label for="eye" data-i="eyeLabel">Eye being tested</label>
+    <select id="eye">
+      <option value="Right">Right eye — cover the left</option>
+      <option value="Left">Left eye — cover the right</option>
+      <option value="Both">Both eyes together</option>
+    </select>
+
+    <div id="acuity-opts">
+      <label for="dist" data-i="distLabel">Testing distance (metres)</label>
+      <input type="number" id="dist" value="3" step="0.5" min="1" max="6">
+      <div class="help" data-i="distHelp">Mark this distance on the ground before the camp starts. 3 m suits most tents.</div>
+    </div>
+
+    <div id="myopia-opts" style="display:none;">
+      <label for="startdist" data-i="startDistLabel">Furthest marked distance (metres)</label>
+      <input type="number" id="startdist" value="6" step="0.5" min="2" max="10">
+      <div class="help" data-i="startDistHelp">The patient starts here and steps closer when prompted. Mark the ground in half-metre steps.</div>
+    </div>
+
+    <h3 data-i="crowdTitle">Crowding bars</h3>
+    <div class="seg" role="group">
+      <button type="button" id="crowd-on" aria-pressed="true" data-i="crowdOn">On</button>
+      <button type="button" id="crowd-off" aria-pressed="false" data-i="crowdOff">Off</button>
+    </div>
+    <div class="help" data-i="crowdHelp">Bars around the shape make the test harder in the same way a real chart line does. Keep them on for school and amblyopia screening, where an isolated shape can hide a real problem.</div>
+
+    <h3 data-i="preflightTitle">Before you start</h3>
+    <ul class="checklist">
+      <li><input type="checkbox" id="pf1"><label for="pf1" data-i="pf1">Screen brightness is at maximum</label></li>
+      <li><input type="checkbox" id="pf2"><label for="pf2" data-i="pf2">Distance is measured and marked on the ground</label></li>
+      <li><input type="checkbox" id="pf3"><label for="pf3" data-i="pf3">The other eye is fully covered, not squeezed shut</label></li>
+      <li><input type="checkbox" id="pf4"><label for="pf4" data-i="pf4">Patient keeps any glasses they normally wear on</label></li>
+    </ul>
+
+    <button class="btn-primary" id="start" type="button" data-i="startBtn">Start screening</button>
+    <div class="note" data-i="disclaimer"><strong>This is a screening aid, not a diagnosis.</strong> It flags people who should see a qualified eye-care professional. It does not produce a spectacle prescription and cannot detect long-sightedness, astigmatism or eye disease.</div>
+  </section>
+
+  <section class="card" id="sec-result" style="display:none;">
+    <h2 data-i="resultTitle">Result</h2>
+    <div class="verdict" id="verdict">—</div>
+    <div class="verdict-sub" id="verdict-sub"></div>
+    <div class="verdict-sub" id="verdict-extra"></div>
+    <table>
+      <tr><th data-i="rPatient">Patient</th><td id="r-pid">—</td></tr>
+      <tr><th data-i="rEye">Eye</th><td id="r-eye">—</td></tr>
+      <tr><th data-i="rTest">Test</th><td id="r-test">—</td></tr>
+      <tr><th data-i="rReversals">Reversals used</th><td id="r-rev">—</td></tr>
+      <tr><th data-i="rTrials">Responses</th><td id="r-trials">—</td></tr>
+      <tr><th data-i="rMedian">Median response time</th><td id="r-rt">—</td></tr>
+      <tr><th data-i="rWhen">Recorded</th><td id="r-when">—</td></tr>
+    </table>
+    <div class="note" id="refer" style="display:none;" data-i="referNote">Refer this patient for a full eye examination.</div>
+    <button class="btn-primary" id="save-next" type="button" data-i="saveNext">Save and screen next patient</button>
+    <button class="btn-quiet" id="discard" type="button" data-i="discard">Discard this result</button>
+  </section>
+
+  <section class="card" id="sec-log">
+    <h2 data-i="logTitle">Today's camp log</h2>
+    <p data-i="logIntro">Results stay on this device only. Nothing is uploaded anywhere. Export before you close the browser.</p>
+    <div id="log-body"></div>
+    <button class="btn-quiet" id="export" type="button" data-i="exportBtn">Export as CSV</button>
+    <button class="btn-link" id="clear-log" type="button" data-i="clearBtn">Clear the log</button>
+  </section>
+
+</main>
+
+<div id="stage">
+  <div id="stage-top">
+    <span id="stage-left">—</span>
+    <button type="button" id="stop" data-i="stopBtn">Stop</button>
+  </div>
+
+  <div id="interstitial">
+    <div class="big" id="inter-big">6 m</div>
+    <p id="inter-text">Move the patient to this mark.</p>
+    <button type="button" id="inter-go" data-i="interGo">Ready</button>
+  </div>
+
+  <div id="optotype"></div>
+
+  <div id="pad">
+    <div></div><div class="key" data-dir="up">▲</div><div></div>
+    <div class="key" data-dir="left">◀</div><div></div><div class="key" data-dir="right">▶</div>
+    <div></div><div class="key" data-dir="down">▼</div><div></div>
+    <div class="key wide" data-dir="unsure" data-i="unsure">Can't tell</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =======================================================================
+     VisionFirst screening engine
+
+     - Physical-unit calibration from an ISO/IEC 7810 ID-1 card (85.60 mm)
+     - Optotype sized by visual angle: overall height 5 arcmin at logMAR 0
+     - 2-down / 1-up staircase, which converges near the 70.7% correct point
+       and is meaningful for a 4-alternative forced-choice task
+     - Threshold = mean of the last reversals, not the single best guess
+     ======================================================================= */
+
+  var CARD_MM = 85.60;
+  var LEVELS = [];
+  for (var L = 1.0; L > -0.15; L -= 0.1) LEVELS.push(Math.round(L * 10) / 10);
+
+  var START_LEVEL = 4;
+  var MAX_REVERSALS = 6;
+  var REVERSALS_AVERAGED = 4;
+  var DIRS = ["up", "right", "down", "left"];
+  var ROT = { right: 0, down: 90, left: 180, up: 270 };
+  var STORE_CAL = "vf.cal.pxPerMM";
+  var STORE_LOG = "vf.log.v1";
+
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+
+  var STR = {
+    hi: {
+      tagline: "शिविर स्क्रीनिंग",
+      calTitle: "स्क्रीन को कैलिब्रेट करें",
+      calIntro: "कोई भी बैंक, आधार या आईडी कार्ड स्क्रीन पर सीधा रखें और हरे आयत का आकार कार्ड के बराबर करें। हर कार्ड का आकार एक जैसा होता है, इसलिए यह तरीका ज़्यादा सटीक है।",
+      calHelp: "पहले चौड़ाई मिलाएँ। ऊँचाई अपने आप सही हो जाएगी।",
+      calSave: "कैलिब्रेशन सेव करें",
+      calManual: "कार्ड नहीं है? स्क्रीन का आकार लिखें",
+      calDiag: "स्क्रीन का विकर्ण (इंच)",
+      calSaveManual: "इसका उपयोग करें",
+      calStatusLabel: "वर्तमान कैलिब्रेशन",
+      setupTitle: "मरीज़ और जाँच",
+      modeLabel: "आप क्या जाँच रहे हैं?",
+      modeAcuityT: "दृष्टि तीक्ष्णता",
+      modeAcuityD: "तय दूरी पर मरीज़ कितना छोटा आकार पहचान सकता है। Snellen और logMAR में परिणाम।",
+      modeMyopiaT: "दूर की दृष्टि (मायोपिया)",
+      modeMyopiaD: "सबसे दूर की दूरी जहाँ से मरीज़ आकार देख सके। निकट दृष्टि दोष की संभावना दर्शाता है।",
+      pidLabel: "मरीज़ का नाम या शिविर आईडी",
+      eyeLabel: "कौन सी आँख जाँची जा रही है",
+      distLabel: "जाँच की दूरी (मीटर)",
+      distHelp: "शिविर शुरू होने से पहले ज़मीन पर निशान लगाएँ। ज़्यादातर तंबुओं के लिए 3 मी ठीक है।",
+      startDistLabel: "सबसे दूर का निशान (मीटर)",
+      startDistHelp: "मरीज़ यहाँ से शुरू करता है और कहने पर पास आता है। आधे मीटर के निशान लगाएँ।",
+      crowdTitle: "क्राउडिंग बार",
+      crowdOn: "चालू",
+      crowdOff: "बंद",
+      crowdHelp: "आकार के चारों ओर की पट्टियाँ जाँच को असली चार्ट जैसी कठिन बनाती हैं। स्कूल और एम्ब्लियोपिया जाँच में इन्हें चालू रखें।",
+      preflightTitle: "शुरू करने से पहले",
+      pf1: "स्क्रीन की चमक पूरी है",
+      pf2: "दूरी नापकर ज़मीन पर निशान लगी है",
+      pf3: "दूसरी आँख पूरी ढकी है, दबाकर बंद नहीं",
+      pf4: "मरीज़ का चश्मा, जो वह पहनता है, लगा रहने दें",
+      startBtn: "जाँच शुरू करें",
+      disclaimer: "यह केवल स्क्रीनिंग है, निदान नहीं। यह बताता है कि किसे नेत्र विशेषज्ञ को दिखाना चाहिए। यह चश्मे का नंबर नहीं देता।",
+      stopBtn: "रोकें",
+      interGo: "तैयार",
+      unsure: "पता नहीं",
+      resultTitle: "परिणाम",
+      rPatient: "मरीज़", rEye: "आँख", rTest: "जाँच", rReversals: "प्रयुक्त रिवर्सल",
+      rTrials: "उत्तर", rMedian: "औसत उत्तर समय", rWhen: "दर्ज समय",
+      referNote: "इस मरीज़ को पूरी आँखों की जाँच के लिए भेजें।",
+      saveNext: "सेव करें और अगला मरीज़",
+      discard: "यह परिणाम हटाएँ",
+      logTitle: "आज का शिविर रिकॉर्ड",
+      logIntro: "परिणाम केवल इसी डिवाइस पर रहते हैं। ब्राउज़र बंद करने से पहले एक्सपोर्ट करें।",
+      exportBtn: "CSV एक्सपोर्ट करें",
+      clearBtn: "रिकॉर्ड मिटाएँ"
+    }
+  };
+  var lang = "en";
+
+  function applyLang() {
+    if (lang === "en") return;
+    var dict = STR.hi;
+    document.querySelectorAll("[data-i]").forEach(function (el) {
+      var k = el.getAttribute("data-i");
+      if (dict[k]) el.innerHTML = dict[k];
+    });
+    document.getElementById("lang-chip").textContent = "English";
+    document.documentElement.lang = "hi";
+  }
+
+  document.getElementById("lang-chip").addEventListener("click", function () {
+    if (lang === "en") { lang = "hi"; applyLang(); }
+    else { window.location.reload(); }
+  });
+
+  /* ---------------- calibration ---------------- */
+  var pxPerMM = 0;
+  var cardEl = document.getElementById("card-shape");
+  var slider = document.getElementById("card-slider");
+
+  function drawCard(widthPx) {
+    cardEl.style.width = widthPx + "px";
+    cardEl.style.height = (widthPx * 53.98 / 85.60) + "px";
+  }
+  function setCal(v, quiet) {
+    pxPerMM = v;
+    var chip = document.getElementById("cal-chip");
+    var stat = document.getElementById("cal-status-val");
+    if (v > 0) {
+      chip.textContent = "Calibrated";
+      chip.classList.add("live");
+      stat.innerHTML = "<b>" + v.toFixed(2) + " px/mm</b>";
+      if (!quiet) lsSet(STORE_CAL, String(v));
+    } else {
+      chip.textContent = "Not calibrated";
+      chip.classList.remove("live");
+      stat.textContent = "—";
+    }
+  }
+
+  slider.addEventListener("input", function () { drawCard(+slider.value); });
+  drawCard(+slider.value);
+
+  document.getElementById("cal-save").addEventListener("click", function () {
+    setCal(+slider.value / CARD_MM);
+    document.getElementById("sec-setup").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  document.getElementById("cal-manual-toggle").addEventListener("click", function () {
+    var w = document.getElementById("manual-wrap");
+    w.style.display = w.style.display === "none" ? "block" : "none";
+  });
+
+  document.getElementById("cal-save-manual").addEventListener("click", function () {
+    var d = parseFloat(document.getElementById("diag").value);
+    if (!d || d < 3 || d > 32) { alert("Enter a screen diagonal between 3 and 32 inches."); return; }
+    var w = window.screen.width * (window.devicePixelRatio || 1);
+    var h = window.screen.height * (window.devicePixelRatio || 1);
+    var diagPx = Math.sqrt(w * w + h * h);
+    setCal(diagPx / (d * 25.4));
+  });
+
+  var savedCal = parseFloat(lsGet(STORE_CAL));
+  if (savedCal > 0) {
+    setCal(savedCal, true);
+    slider.value = Math.round(savedCal * CARD_MM);
+    drawCard(+slider.value);
+  }
+
+  /* ---------------- optotype geometry ---------------- */
+  function letterPx(logmar, distM) {
+    var arcmin = 5 * Math.pow(10, logmar);
+    var rad = arcmin * (Math.PI / (180 * 60));
+    var mm = 2 * (distM * 1000) * Math.tan(rad / 2);
+    return mm * pxPerMM;
+  }
+
+  function drawE(dir, sizePx, withBars) {
+    var host = document.getElementById("optotype");
+    host.innerHTML = "";
+    var NS = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(NS, "svg");
+    var box = withBars ? 90 : 50;
+    var px = withBars ? sizePx * (90 / 50) : sizePx;
+    svg.setAttribute("width", px);
+    svg.setAttribute("height", px);
+    svg.setAttribute("viewBox", "0 0 " + box + " " + box);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Tumbling E optotype");
+
+    var off = withBars ? 20 : 0;
+    var g = document.createElementNS(NS, "g");
+    g.setAttribute("transform", "rotate(" + ROT[dir] + " " + (box / 2) + " " + (box / 2) + ")");
+
+    [[0,0,10,50],[0,0,50,10],[0,20,50,10],[0,40,50,10]].forEach(function (r) {
+      var el = document.createElementNS(NS, "rect");
+      el.setAttribute("x", r[0] + off); el.setAttribute("y", r[1] + off);
+      el.setAttribute("width", r[2]);   el.setAttribute("height", r[3]);
+      el.setAttribute("fill", "#000000");
+      g.appendChild(el);
+    });
+    svg.appendChild(g);
+
+    if (withBars) {
+      [[20,0,50,10],[20,80,50,10],[0,20,10,50],[80,20,10,50]].forEach(function (r) {
+        var el = document.createElementNS(NS, "rect");
+        el.setAttribute("x", r[0]); el.setAttribute("y", r[1]);
+        el.setAttribute("width", r[2]); el.setAttribute("height", r[3]);
+        el.setAttribute("fill", "#000000");
+        svg.appendChild(el);
+      });
+    }
+    host.appendChild(svg);
+  }
+
+  function snellen6(logmar) {
+    var den = 6 * Math.pow(10, logmar);
+    return "6/" + (den >= 10 ? Math.round(den) : (Math.round(den * 10) / 10));
+  }
+
+  /* ---------------- run state ---------------- */
+  var mode = "acuity";
+  var crowded = true;
+  var run = null;
+  var DIST_STEPS = [6, 5, 4, 3, 2.5, 2, 1.5, 1, 0.5];
+
+  function freshRun() {
+    return {
+      idx: START_LEVEL, distIdx: 0,
+      consecutiveRight: 0,
+      lastDirection: 0,
+      reversals: [],
+      trials: [], answer: null, shownAt: 0,
+      fixedPx: 0
+    };
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.getElementById("mode-acuity").setAttribute("aria-pressed", m === "acuity");
+    document.getElementById("mode-myopia").setAttribute("aria-pressed", m === "myopia");
+    document.getElementById("acuity-opts").style.display = m === "acuity" ? "block" : "none";
+    document.getElementById("myopia-opts").style.display = m === "myopia" ? "block" : "none";
+  }
+  document.getElementById("mode-acuity").addEventListener("click", function () { setMode("acuity"); });
+  document.getElementById("mode-myopia").addEventListener("click", function () { setMode("myopia"); });
+
+  function setCrowd(v) {
+    crowded = v;
+    document.getElementById("crowd-on").setAttribute("aria-pressed", v);
+    document.getElementById("crowd-off").setAttribute("aria-pressed", !v);
+  }
+  document.getElementById("crowd-on").addEventListener("click", function () { setCrowd(true); });
+  document.getElementById("crowd-off").addEventListener("click", function () { setCrowd(false); });
+
+  /* ---------------- presentation ---------------- */
+  function showInterstitial(bigText, msg, cb) {
+    document.getElementById("inter-big").textContent = bigText;
+    document.getElementById("inter-text").textContent = msg;
+    document.getElementById("interstitial").style.display = "flex";
+    document.getElementById("optotype").style.display = "none";
+    document.getElementById("pad").style.display = "none";
+    document.getElementById("inter-go").onclick = function () {
+      document.getElementById("interstitial").style.display = "none";
+      document.getElementById("optotype").style.display = "flex";
+      document.getElementById("pad").style.display = "grid";
+      cb();
+    };
+  }
+
+  function nextTrial() {
+    var dir = DIRS[Math.floor(Math.random() * 4)];
+    run.answer = dir;
+
+    if (mode === "acuity") {
+      var lm = LEVELS[run.idx];
+      var size = letterPx(lm, run.distM);
+      size = Math.max(8, Math.min(size, window.innerHeight * 0.55));
+      drawE(dir, size, crowded);
+      document.getElementById("stage-left").textContent =
+        snellen6(lm) + " · logMAR " + lm.toFixed(1) + " · " + run.distM + " m";
+      run.shownAt = performance.now();
+    } else {
+      if (!run.fixedPx) {
+        run.fixedPx = Math.max(10, Math.min(letterPx(0.3, 6), window.innerHeight * 0.45));
+      }
+      var d = DIST_STEPS[run.distIdx];
+      showInterstitial(
+        d + " m",
+        lang === "hi" ? "मरीज़ को इस निशान पर ले जाएँ।" : "Move the patient to this mark.",
+        function () {
+          drawE(dir, run.fixedPx, crowded);
+          document.getElementById("stage-left").textContent = "Target distance " + d + " m";
+          run.shownAt = performance.now();
+        }
+      );
+    }
+  }
+
+  /* ---------------- responses ---------------- */
+  function record(correct, unsure) {
+    run.trials.push({
+      level: mode === "acuity" ? LEVELS[run.idx] : DIST_STEPS[run.distIdx],
+      correct: correct,
+      rt: run.shownAt ? Math.round(performance.now() - run.shownAt) : null,
+      unsure: !!unsure
+    });
+  }
+
+  function stepAcuity(correct) {
+    var moved = 0;
+    if (correct) {
+      run.consecutiveRight++;
+      if (run.consecutiveRight >= 2) { run.consecutiveRight = 0; moved = +1; }
+    } else {
+      run.consecutiveRight = 0;
+      moved = -1;
+    }
+    if (moved === 0) return true;
+
+    if (run.lastDirection !== 0 && moved !== run.lastDirection) {
+      run.reversals.push(LEVELS[run.idx]);
+    }
+    run.lastDirection = moved;
+
+    var next = run.idx + moved;
+    if (next < 0 || next >= LEVELS.length) {
+      run.reversals.push(LEVELS[run.idx]);
+      return false;
+    }
+    run.idx = next;
+    return run.reversals.length < MAX_REVERSALS;
+  }
+
+  function stepMyopia(correct) {
+    var moved = correct ? +1 : -1;
+    if (run.lastDirection !== 0 && moved !== run.lastDirection) {
+      run.reversals.push(DIST_STEPS[run.distIdx]);
+    }
+    run.lastDirection = moved;
+    var next = run.distIdx + (correct ? -1 : +1);
+    if (next < 0 || next >= DIST_STEPS.length) {
+      run.reversals.push(DIST_STEPS[run.distIdx]);
+      return false;
+    }
+    run.distIdx = next;
+    return run.reversals.length < MAX_REVERSALS;
+  }
+
+  function answer(dir) {
+    if (!run || !run.answer) return;
+    var unsure = dir === "unsure";
+    var correct = !unsure && dir === run.answer;
+    record(correct, unsure);
+    var keepGoing = mode === "acuity" ? stepAcuity(correct) : stepMyopia(correct);
+    if (keepGoing) nextTrial(); else finish();
+  }
+
+  document.querySelectorAll(".key").forEach(function (k) {
+    k.addEventListener("click", function () { answer(k.getAttribute("data-dir")); });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (document.getElementById("stage").style.display !== "flex") return;
+    var map = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
+    if (map[e.key]) { e.preventDefault(); answer(map[e.key]); }
+    if (e.key === " ") { e.preventDefault(); answer("unsure"); }
+  });
+
+  /* ---------------- finishing ---------------- */
+  function medianRT(trials) {
+    var v = trials.map(function (t) { return t.rt; })
+      .filter(function (x) { return x != null; })
+      .sort(function (a, b) { return a - b; });
+    if (!v.length) return null;
+    var m = Math.floor(v.length / 2);
+    return v.length % 2 ? v[m] : Math.round((v[m - 1] + v[m]) / 2);
+  }
+
+  function threshold(list) {
+    var use = list.slice(-REVERSALS_AVERAGED);
+    if (!use.length) return null;
+    return use.reduce(function (a, b) { return a + b; }, 0) / use.length;
+  }
+
+  var pending = null;
+
+  function finish() {
+    document.getElementById("stage").style.display = "none";
+    document.getElementById("sec-setup").style.display = "none";
+    document.getElementById("sec-cal").style.display = "none";
+    var sec = document.getElementById("sec-result");
+    sec.style.display = "block";
+
+    var verdict = document.getElementById("verdict");
+    var sub = document.getElementById("verdict-sub");
+    var extra = document.getElementById("verdict-extra");
+    var refer = document.getElementById("refer");
+    var seen = run.trials.some(function (t) { return t.correct; });
+
+    var rec = {
+      pid: run.pid || "—", eye: run.eye,
+      mode: mode === "acuity" ? "Visual acuity" : "Distance vision",
+      crowded: crowded ? "yes" : "no",
+      reversals: run.reversals.length,
+      trials: run.trials.length,
+      rt: medianRT(run.trials),
+      when: new Date().toISOString()
+    };
+
+    if (mode === "acuity") {
+      if (!seen) {
+        verdict.textContent = "Worse than " + snellen6(LEVELS[0]);
+        verdict.className = "verdict flag";
+        sub.textContent = "The patient could not identify even the largest shape at " + run.distM + " m.";
+        extra.textContent = "";
+        rec.result = "worse than " + snellen6(LEVELS[0]);
+        rec.logmar = "";
+        rec.flag = "refer";
+        refer.style.display = "block";
+      } else {
+        var t = threshold(run.reversals);
+        if (t === null) t = LEVELS[run.idx];
+        verdict.textContent = snellen6(t);
+        verdict.className = "verdict " + (t <= 0.3 ? "pass" : "flag");
+        sub.textContent = "logMAR " + t.toFixed(2) + ", averaged over the last " +
+          Math.min(run.reversals.length, REVERSALS_AVERAGED) + " reversals.";
+        extra.textContent = crowded
+          ? "Measured with crowding bars."
+          : "Measured without crowding bars, which can read slightly better than a real chart line.";
+        rec.result = snellen6(t);
+        rec.logmar = t.toFixed(2);
+        rec.flag = t > 0.3 ? "refer" : "pass";
+        refer.style.display = t > 0.3 ? "block" : "none";
+      }
+      document.getElementById("r-test").textContent = "Visual acuity at " + run.distM + " m";
+      rec.distance = run.distM + " m";
+    } else {
+      var far = threshold(run.reversals);
+      if (far === null) {
+        var corr = run.trials.filter(function (x) { return x.correct; }).map(function (x) { return x.level; });
+        far = corr.length ? Math.max.apply(null, corr) : null;
+      }
+      if (!seen || !far) {
+        verdict.textContent = "Not established";
+        verdict.className = "verdict flag";
+        sub.textContent = "The patient could not identify the shape at any marked distance.";
+        extra.textContent = "";
+        rec.result = "not established"; rec.flag = "refer";
+        refer.style.display = "block";
+      } else if (far >= run.startD - 0.01) {
+        verdict.textContent = "No myopia flagged";
+        verdict.className = "verdict pass";
+        sub.textContent = "Seen correctly at " + far.toFixed(1) + " m, the furthest distance you marked.";
+        extra.textContent = "This mode looks only for short-sightedness. It does not rule out other conditions.";
+        rec.result = "no myopia flagged"; rec.flag = "pass";
+        refer.style.display = "none";
+      } else {
+        verdict.textContent = "Possible myopia";
+        verdict.className = "verdict flag";
+        sub.textContent = "Far point is about " + far.toFixed(1) + " m.";
+        extra.textContent = "Very roughly " + (-1 / far).toFixed(2) +
+          " D. Treat this as a referral trigger only, never as a prescription.";
+        rec.result = "possible myopia"; rec.farpoint = far.toFixed(1); rec.flag = "refer";
+        refer.style.display = "block";
+      }
+      document.getElementById("r-test").textContent = "Distance vision from " + run.startD + " m";
+      rec.distance = run.startD + " m start";
+    }
+
+    document.getElementById("r-pid").textContent = rec.pid;
+    document.getElementById("r-eye").textContent = rec.eye;
+    document.getElementById("r-rev").textContent = rec.reversals;
+    document.getElementById("r-trials").textContent = rec.trials;
+    document.getElementById("r-rt").textContent = rec.rt != null ? (rec.rt / 1000).toFixed(1) + " s" : "—";
+    document.getElementById("r-when").textContent = new Date().toLocaleString();
+
+    pending = rec;
+    sec.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  document.getElementById("stop").addEventListener("click", function () {
+    if (run && run.trials.length) finish(); else backToSetup();
+  });
+
+  document.getElementById("start").addEventListener("click", function () {
+    if (!(pxPerMM > 0)) {
+      alert("Calibrate the screen first, in step 1. Without it the shapes cannot be sized correctly.");
+      document.getElementById("sec-cal").scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    run = freshRun();
+    run.pid = document.getElementById("pid").value.trim();
+    run.eye = document.getElementById("eye").value;
+
+    if (mode === "acuity") {
+      var d = parseFloat(document.getElementById("dist").value);
+      if (!d || d < 1) { alert("Enter a testing distance of at least 1 metre."); return; }
+      run.distM = d;
+    } else {
+      var s = parseFloat(document.getElementById("startdist").value) || 6;
+      run.startD = s;
+      DIST_STEPS = [s, s * 0.83, s * 0.67, s * 0.5, s * 0.42, s * 0.33, s * 0.25, s * 0.17, s * 0.08]
+        .map(function (x) { return Math.round(x * 10) / 10; });
+      run.distIdx = 0;
+    }
+
+    document.getElementById("stage").style.display = "flex";
+    document.getElementById("interstitial").style.display = "none";
+    document.getElementById("optotype").style.display = "flex";
+    document.getElementById("pad").style.display = "grid";
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(function () {});
+    }
+    nextTrial();
+  });
+
+  function backToSetup() {
+    document.getElementById("stage").style.display = "none";
+    document.getElementById("sec-result").style.display = "none";
+    document.getElementById("sec-cal").style.display = "block";
+    document.getElementById("sec-setup").style.display = "block";
+    ["pf1", "pf2", "pf3", "pf4"].forEach(function (id) { document.getElementById(id).checked = false; });
+  }
+
+  /* ---------------- camp log ---------------- */
+  function readLog() { try { return JSON.parse(lsGet(STORE_LOG) || "[]"); } catch (e) { return []; } }
+  function writeLog(arr) { lsSet(STORE_LOG, JSON.stringify(arr)); }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderLog() {
+    var arr = readLog();
+    var host = document.getElementById("log-body");
+    if (!arr.length) {
+      host.innerHTML = '<div class="empty">No patients screened yet. Results will appear here as you go.</div>';
+      return;
+    }
+    host.innerHTML = "";
+    arr.slice().reverse().forEach(function (r) {
+      var row = document.createElement("div");
+      row.className = "log-row";
+      var when = "";
+      try { when = new Date(r.when).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } catch (e) {}
+      row.innerHTML =
+        '<div><div class="who">' + esc(r.pid) + '</div>' +
+        '<div class="meta">' + esc(r.eye) + ' eye · ' + esc(r.mode) + ' · ' + when + '</div></div>' +
+        '<div class="val' + (r.flag === "refer" ? " flag" : "") + '">' + esc(r.result) + '</div>';
+      host.appendChild(row);
+    });
+  }
+
+  document.getElementById("save-next").addEventListener("click", function () {
+    if (pending) {
+      var arr = readLog();
+      arr.push(pending);
+      writeLog(arr);
+      pending = null;
+      renderLog();
+    }
+    backToSetup();
+    document.getElementById("pid").value = "";
+    document.getElementById("sec-setup").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  document.getElementById("discard").addEventListener("click", function () {
+    pending = null;
+    backToSetup();
+  });
+
+  document.getElementById("clear-log").addEventListener("click", function () {
+    if (!confirm("Clear every result stored on this device? Export first if you still need them.")) return;
+    writeLog([]);
+    renderLog();
+  });
+
+  document.getElementById("export").addEventListener("click", function () {
+    var arr = readLog();
+    if (!arr.length) { alert("Nothing to export yet."); return; }
+    var cols = ["when", "pid", "eye", "mode", "distance", "result", "logmar", "farpoint",
+                "flag", "crowded", "trials", "reversals", "rt"];
+    var lines = [cols.join(",")];
+    arr.forEach(function (r) {
+      lines.push(cols.map(function (c) {
+        var v = r[c] == null ? "" : String(r[c]);
+        return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+      }).join(","));
+    });
+    var csv = lines.join("\n");
+    try {
+      var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "visionfirst-camp-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    } catch (e) {
+      window.prompt("Copy this CSV:", csv);
+    }
+  });
+
+  setMode("acuity");
+  setCrowd(true);
+  renderLog();
+})();
+</script>
+
+</body>
+</html>

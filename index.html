@@ -64,6 +64,7 @@
     color: #EAF3F1;
     cursor: pointer;
     font-family: inherit;
+    text-decoration: none;
   }
   .chip.live { border-color: #8FD6C6; background: rgba(143,214,198,0.18); }
 
@@ -250,6 +251,7 @@
     <span class="sub" data-i="tagline">Field screening</span>
   </div>
   <div class="bar-right">
+    <a class="chip" href="triage.html" data-i="toTriage">Triage</a>
     <button class="chip" id="cal-chip" type="button">Not calibrated</button>
     <button class="chip" id="lang-chip" type="button">हिंदी</button>
   </div>
@@ -425,6 +427,7 @@
   var STR = {
     hi: {
       tagline: "शिविर स्क्रीनिंग",
+      toTriage: "ट्राइएज",
       calTitle: "स्क्रीन को कैलिब्रेट करें",
       calIntro: "कोई भी बैंक, आधार या आईडी कार्ड स्क्रीन पर सीधा रखें और हरे आयत का आकार कार्ड के बराबर करें। हर कार्ड का आकार एक जैसा होता है, इसलिए यह तरीका ज़्यादा सटीक है।",
       calHelp: "पहले चौड़ाई मिलाएँ। ऊँचाई अपने आप सही हो जाएगी।",

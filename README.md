@@ -20,6 +20,8 @@ I grew up around this. My father works as an ophthalmic assistant and goes out o
 
 Both use a **Tumbling E** optotype: the patient just indicates which way the E opens. No reading required, so it works regardless of literacy or language.
 
+**[Triage questionnaire](https://aadityaisn07-arch.github.io/visionfirst/triage.html).** A structured intake in Hindi and English that records why the patient came, screens for urgent symptoms, and captures the history that matters — diabetes without a recent eye check, family glaucoma, glasses never tested. It sorts each patient into **refer today**, **refer soon** or **routine**, so a worker screening two hundred people knows which few cannot wait. Reachable from the Triage link in the tool's header.
+
 ## How it stays accurate
 
 A screening tool that shows the wrong size shape produces confident, wrong numbers. Four things guard against that:
@@ -57,7 +59,7 @@ Results are stored only in the browser on the device running the test. Nothing i
 | Screen calibration | Working |
 | Camp log and CSV export | Working |
 | Bilingual Hindi/English interface | Working |
-| Structured triage questionnaire | In development |
+| Bilingual triage questionnaire | Working |
 | Multi-camp analytics dashboard | In development |
 
 ## Limitations — please read
@@ -65,6 +67,8 @@ Results are stored only in the browser on the device running the test. Nothing i
 **This is a screening aid, not a diagnosis.** It identifies people who should see a qualified eye-care professional. It does not produce a spectacle prescription.
 
 **It only screens for reduced acuity and short-sightedness.** It cannot detect long-sightedness, astigmatism, cataract, glaucoma or any other eye disease. A normal result here does not mean healthy eyes.
+
+**The triage questionnaire records what the patient reports; it does not examine them.** A patient who reports nothing can still have advanced disease. Every person screened should be offered a full examination — the questionnaire only decides who cannot wait for one.
 
 **It has not yet been clinically validated.** The methodology follows established practice, but results have not been compared against clinical refraction or a standard chart in a published study. Treat it as a triage aid that flags people for proper examination, and validate it against your own standard before relying on it.
 

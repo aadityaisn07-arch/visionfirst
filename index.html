@@ -54,7 +54,7 @@
   .brand { display: flex; align-items: baseline; gap: 9px; }
   .brand .mark { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.02em; }
   .brand .sub { font-size: var(--fs-micro); opacity: 0.82; }
-  .bar-right { display: flex; align-items: center; gap: 8px; }
+  .bar-right { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
   .chip {
     font-size: var(--fs-micro);
     padding: 4px 9px;
@@ -241,6 +241,7 @@
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   @media (max-width: 380px) { .key { height: 60px; } }
+  @media (max-width: 560px) { .brand .sub { display: none; } }
 </style>
 </head>
 <body>
@@ -252,6 +253,7 @@
   </div>
   <div class="bar-right">
     <a class="chip" href="triage.html" data-i="toTriage">Triage</a>
+    <a class="chip" href="dashboard.html" data-i="toReport">Report</a>
     <button class="chip" id="cal-chip" type="button">Not calibrated</button>
     <button class="chip" id="lang-chip" type="button">हिंदी</button>
   </div>
@@ -427,6 +429,7 @@
   var STR = {
     hi: {
       tagline: "शिविर स्क्रीनिंग",
+      toReport: "रिपोर्ट",
       toTriage: "ट्राइएज",
       calTitle: "स्क्रीन को कैलिब्रेट करें",
       calIntro: "कोई भी बैंक, आधार या आईडी कार्ड स्क्रीन पर सीधा रखें और हरे आयत का आकार कार्ड के बराबर करें। हर कार्ड का आकार एक जैसा होता है, इसलिए यह तरीका ज़्यादा सटीक है।",

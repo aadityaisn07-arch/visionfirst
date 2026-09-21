@@ -44,7 +44,7 @@
   .brand { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
   .brand .mark { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.02em; }
   .brand .sub { font-size: 0.78rem; opacity: 0.82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bar-right { display: flex; align-items: center; gap: 8px; flex: none; }
+  .bar-right { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; flex: none; }
   .chip {
     font-size: 0.78rem; padding: 4px 9px; border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.08);
@@ -159,6 +159,7 @@
   .empty { color: var(--ink-soft); font-size: 0.95rem; padding: 14px 0; }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (max-width: 560px) { .brand .sub { display: none; } }
 </style>
 </head>
 <body>
@@ -170,6 +171,7 @@
   </div>
   <div class="bar-right">
     <a class="chip" href="index.html" data-i="toTest">Acuity test</a>
+    <a class="chip" href="dashboard.html" data-i="toReport">Report</a>
     <button class="chip" id="lang-chip" type="button">हिंदी</button>
   </div>
 </header>
@@ -342,6 +344,7 @@
   var STR = {
     hi: {
       tagline: "ट्राइएज प्रश्नावली",
+      toReport: "रिपोर्ट",
       toTest: "दृष्टि जाँच",
       s1: "मरीज़",
       pidLabel: "शिविर आईडी",

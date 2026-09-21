@@ -22,6 +22,8 @@ Both use a **Tumbling E** optotype: the patient just indicates which way the E o
 
 **[Triage questionnaire](https://aadityaisn07-arch.github.io/visionfirst/triage.html).** A structured intake in Hindi and English that records why the patient came, screens for urgent symptoms, and captures the history that matters — diabetes without a recent eye check, family glaucoma, glasses never tested. It sorts each patient into **refer today**, **refer soon** or **routine**, so a worker screening two hundred people knows which few cannot wait. Reachable from the Triage link in the tool's header.
 
+**[Camp report](https://aadityaisn07-arch.github.io/visionfirst/dashboard.html).** Load the day's two CSV exports and get the numbers an organiser actually needs: how many were screened, how many were flagged, the same-day referral list to hand to the supervisor before anyone goes home, the spread of visual acuity, and what drove the referrals. Copy it as text or print it as a PDF. It also carries sample data, so you can show someone what a camp report looks like before you have run one.
+
 ## How it stays accurate
 
 A screening tool that shows the wrong size shape produces confident, wrong numbers. Four things guard against that:
@@ -42,7 +44,7 @@ There is also a "Can't tell" response, so hesitation is recorded as not-seen rat
 2. Mark your testing distance on the ground before patients arrive (3 m suits most tents).
 3. Work through the pre-flight checklist: screen brightness at maximum, distance marked, other eye properly covered, patient keeps their usual glasses on.
 4. Screen each patient. Results save to a camp log on the device.
-5. Export the log as CSV at the end of the day.
+5. Export both logs as CSV at the end of the day, then open the camp report and load them in.
 
 The interface switches between **English and Hindi** from the header.
 
@@ -60,7 +62,7 @@ Results are stored only in the browser on the device running the test. Nothing i
 | Camp log and CSV export | Working |
 | Bilingual Hindi/English interface | Working |
 | Bilingual triage questionnaire | Working |
-| Multi-camp analytics dashboard | In development |
+| Camp report and analytics | Working |
 
 ## Limitations — please read
 

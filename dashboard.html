@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Camp analytics for VisionFirst. Load the day's CSV exports and see what the camp found.">
+<meta name="theme-color" content="#0E5F55">
+<title>VisionFirst — Camp Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:      #FBFAF7;
+    --panel:      #FFFFFF;
+    --ink:        #14181A;
+    --ink-soft:   #5F6B6E;
+    --ink-mute:   #8A9497;
+    --instrument: #0E5F55;
+    --instrument-tint: #E6F0EE;
+    --rule:       #DDE3E1;
+    --grid:       #EDF0EF;
+
+    /* chart palette — validated, see note in the page footer */
+    --series:     #0d8a7a;   /* single-series magnitude */
+    --routine:    #0ca30c;
+    --soon:       #fab219;
+    --today:      #d03b3b;
+
+    --font: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    background: var(--paper); color: var(--ink);
+    font-family: var(--font); font-size: 16px; line-height: 1.55;
+  }
+
+  header.bar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--instrument); color: #EAF3F1;
+    padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+  .brand .mark { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.02em; }
+  .brand .sub { font-size: 0.78rem; opacity: 0.82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-right { display: flex; align-items: center; gap: 8px; flex: none; }
+  .chip {
+    font-size: 0.78rem; padding: 4px 9px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.08);
+    color: #EAF3F1; cursor: pointer; font-family: inherit; text-decoration: none;
+  }
+
+  main { max-width: 860px; margin: 0 auto; padding: 22px 16px 72px; }
+
+  section.card {
+    background: var(--panel); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 24px; margin-bottom: 18px;
+  }
+
+  h2 { font-size: 1.2rem; line-height: 1.25; letter-spacing: -0.015em; margin: 0 0 4px; font-weight: 700; }
+  .card > h2 + p { margin-top: 0; }
+  p  { margin: 0 0 14px; color: var(--ink-soft); font-size: 0.93rem; max-width: 66ch; }
+
+  button {
+    font-family: inherit; font-size: 0.93rem; font-weight: 600;
+    border: none; border-radius: 4px; cursor: pointer; padding: 12px 16px;
+  }
+  .btn-primary { background: var(--instrument); color: #fff; }
+  .btn-quiet { background: #fff; color: var(--instrument); border: 1px solid var(--instrument); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+  .btn-row button { flex: 1 1 200px; }
+  button:focus-visible, label.drop:focus-within { outline: 2px solid var(--instrument); outline-offset: 2px; }
+
+  /* ---- load ---- */
+  .drops { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 620px) { .drops { grid-template-columns: 1fr; } }
+  label.drop {
+    display: block; border: 1px dashed var(--rule); border-radius: 5px;
+    padding: 18px; text-align: center; cursor: pointer; background: #FDFDFC;
+  }
+  label.drop.loaded { border-style: solid; border-color: var(--instrument); background: var(--instrument-tint); }
+  label.drop .t { font-weight: 700; font-size: 0.93rem; display: block; margin-bottom: 3px; }
+  label.drop .d { font-size: 0.78rem; color: var(--ink-soft); line-height: 1.45; }
+  label.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+  .banner {
+    border-left: 3px solid var(--soon); background: #FEF7E6;
+    padding: 11px 14px; border-radius: 0 4px 4px 0;
+    font-size: 0.82rem; color: #6B4E07; margin-bottom: 18px;
+  }
+  .banner strong { color: #543D05; }
+
+  /* ---- KPI row ---- */
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+  @media (max-width: 560px) { .kpis { grid-template-columns: 1fr; } }
+  .kpi { background: var(--panel); padding: 20px; }
+  .kpi .v { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+  .kpi .l { font-size: 0.84rem; color: var(--ink-soft); margin-top: 6px; }
+  .kpi.alert .v { color: var(--today); }
+
+  /* ---- charts ---- */
+  .chart { margin-top: 6px; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis-label { font-size: 11px; fill: var(--ink-mute); }
+  .val-label { font-size: 11px; font-weight: 600; fill: var(--ink-soft); }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
+  .legend .item { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; color: var(--ink-soft); }
+  .legend .sw { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+
+  .bar-seg { cursor: default; }
+  .bar-seg:hover, .bar-mark:hover { opacity: 0.85; }
+
+  /* tooltip */
+  #tip {
+    position: fixed; pointer-events: none; z-index: 60;
+    background: #14181A; color: #fff; font-size: 0.8rem; line-height: 1.4;
+    padding: 7px 10px; border-radius: 4px; opacity: 0; transition: opacity .1s;
+    max-width: 230px;
+  }
+  #tip b { font-weight: 700; }
+
+  /* ---- tables ---- */
+  table { width: 100%; border-collapse: collapse; font-size: 0.89rem; margin-top: 8px; }
+  th, td { text-align: left; padding: 9px 10px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--ink-soft); font-weight: 600; font-size: 0.8rem; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.76rem; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .pill.today   { background: #FBEAE8; color: #8E2019; }
+  .pill.soon    { background: #FEF3DC; color: #6B4E07; }
+  .pill.routine { background: #E6F4E6; color: #146014; }
+
+  details { margin-top: 14px; }
+  details > summary {
+    cursor: pointer; font-size: 0.86rem; color: var(--instrument);
+    font-weight: 600; padding: 6px 0;
+  }
+  .scroller { overflow-x: auto; }
+
+  .empty { color: var(--ink-soft); font-size: 0.93rem; padding: 10px 0; }
+  .foot { font-size: 0.78rem; color: var(--ink-mute); line-height: 1.6; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media print { header.bar, .noprint { display: none !important; } section.card { break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">
+    <span class="mark">VisionFirst</span>
+    <span class="sub">Camp report</span>
+  </div>
+  <div class="bar-right">
+    <a class="chip" href="index.html">Acuity test</a>
+    <a class="chip" href="triage.html">Triage</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- LOAD -->
+  <section class="card noprint" id="load-card">
+    <h2>Load the day's exports</h2>
+    <p>Drop in the CSV files the acuity test and triage questionnaire produced. Everything is read in this browser — no file is uploaded anywhere.</p>
+
+    <div class="drops">
+      <label class="drop" id="drop-acuity">
+        <span class="t">Screening CSV</span>
+        <span class="d" id="d-acuity">visionfirst-camp-….csv</span>
+        <input type="file" accept=".csv,text/csv" id="f-acuity">
+      </label>
+      <label class="drop" id="drop-triage">
+        <span class="t">Triage CSV</span>
+        <span class="d" id="d-triage">visionfirst-triage-….csv</span>
+        <input type="file" accept=".csv,text/csv" id="f-triage">
+      </label>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-quiet" id="sample" type="button">Load sample data</button>
+      <button class="btn-quiet" id="reset" type="button">Clear</button>
+    </div>
+    <p style="margin-top:14px;font-size:0.8rem;">Sample data is invented, for showing people what a camp report looks like before you've run one. It is labelled as sample wherever it appears.</p>
+  </section>
+
+  <div id="report" style="display:none;">
+
+    <div class="banner" id="sample-banner" style="display:none;">
+      <strong>Sample data.</strong> These figures are invented to demonstrate the report. They are not from a real camp.
+    </div>
+
+    <!-- KPIs -->
+    <section class="card">
+      <h2 id="report-title">Camp summary</h2>
+      <p id="report-sub">—</p>
+      <div class="kpis">
+        <div class="kpi"><div class="v" id="k-total">—</div><div class="l">people screened</div></div>
+        <div class="kpi"><div class="v" id="k-refer">—</div><div class="l" id="k-refer-l">flagged for referral</div></div>
+        <div class="kpi alert"><div class="v" id="k-today">—</div><div class="l">needed a doctor the same day</div></div>
+      </div>
+    </section>
+
+    <!-- triage priority -->
+    <section class="card" id="card-priority">
+      <h2>Referral priority</h2>
+      <p>How the triage questionnaire sorted everyone it saw.</p>
+      <div class="chart" id="chart-priority"></div>
+      <div class="legend" id="legend-priority"></div>
+      <details>
+        <summary>Show as a table</summary>
+        <table id="table-priority"></table>
+      </details>
+    </section>
+
+    <!-- acuity distribution -->
+    <section class="card" id="card-acuity">
+      <h2>Visual acuity</h2>
+      <p>Best recorded acuity per person. In India, presenting vision worse than 6/12 is the usual threshold for needing correction or further examination.</p>
+      <div class="chart" id="chart-acuity"></div>
+      <details>
+        <summary>Show as a table</summary>
+        <table id="table-acuity"></table>
+      </details>
+    </section>
+
+    <!-- reasons -->
+    <section class="card" id="card-reasons">
+      <h2>Why people were flagged</h2>
+      <p>Counted across every triage record. One person can contribute more than one reason.</p>
+      <div class="chart" id="chart-reasons"></div>
+      <details>
+        <summary>Show as a table</summary>
+        <table id="table-reasons"></table>
+      </details>
+    </section>
+
+    <!-- urgent list -->
+    <section class="card" id="card-urgent">
+      <h2>Same-day referrals</h2>
+      <p>The list to hand to the camp supervisor before anyone goes home.</p>
+      <div class="scroller"><table id="table-urgent"></table></div>
+    </section>
+
+    <section class="card noprint">
+      <h2>Take it with you</h2>
+      <p>Copy a plain-text summary for a report or a message, or print this page as a PDF.</p>
+      <div class="btn-row">
+        <button class="btn-primary" id="copy-summary" type="button">Copy text summary</button>
+        <button class="btn-quiet" id="print" type="button">Print or save as PDF</button>
+      </div>
+    </section>
+
+    <p class="foot">
+      Counts describe what this toolkit recorded, not a clinical audit. A person screened but not
+      triaged appears in the acuity figures only, and the reverse also holds. Chart colours were
+      checked for colour-vision deficiency; every band also carries a written label, so nothing
+      here depends on colour alone.
+    </p>
+
+  </div>
+
+</main>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = {
+    series:  "#0d8a7a",
+    routine: "#0ca30c",
+    soon:    "#fab219",
+    today:   "#d03b3b",
+    surface: "#FFFFFF",
+    grid:    "#EDF0EF"
+  };
+
+  var BANDS = [
+    { key: "routine", label: "Routine",      color: C.routine },
+    { key: "soon",    label: "Refer soon",   color: C.soon },
+    { key: "today",   label: "Refer today",  color: C.today }
+  ];
+
+  var acuityRows = null, triageRows = null, isSample = false;
+
+  /* ---------------- CSV ---------------- */
+  function parseCSV(text) {
+    text = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
+    var rows = [], row = [], cur = "", q = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (q) {
+        if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+        else cur += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ",") { row.push(cur); cur = ""; }
+      else if (ch === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
+      else cur += ch;
+    }
+    if (cur.length || row.length) { row.push(cur); rows.push(row); }
+    rows = rows.filter(function (r) { return r.some(function (c) { return c.trim() !== ""; }); });
+    if (!rows.length) return [];
+    var head = rows[0].map(function (h) { return h.trim(); });
+    return rows.slice(1).map(function (r) {
+      var o = {};
+      head.forEach(function (h, i) { o[h] = (r[i] || "").trim(); });
+      return o;
+    });
+  }
+
+  /* ---------------- helpers ---------------- */
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function el(tag, attrs, kids) {
+    var NS = "http://www.w3.org/2000/svg";
+    var n = document.createElementNS(NS, tag);
+    for (var k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) n.setAttribute(k, attrs[k]);
+    (kids || []).forEach(function (c) { n.appendChild(c); });
+    return n;
+  }
+  function txt(tag, attrs, s) { var n = el(tag, attrs); n.textContent = s; return n; }
+
+  // rounded only at the data end — square at the baseline
+  function barPath(x, y, w, h, r, dir) {
+    r = Math.max(0, Math.min(r, dir === "up" ? h : w, dir === "up" ? w / 2 : h / 2));
+    if (h <= 0 || w <= 0) return "";
+    if (dir === "up") {   // grows upward, round the top
+      return "M" + x + "," + (y + h) + " L" + x + "," + (y + r) +
+             " Q" + x + "," + y + " " + (x + r) + "," + y +
+             " L" + (x + w - r) + "," + y +
+             " Q" + (x + w) + "," + y + " " + (x + w) + "," + (y + r) +
+             " L" + (x + w) + "," + (y + h) + " Z";
+    }
+    // grows rightward, round the right end
+    return "M" + x + "," + y + " L" + (x + w - r) + "," + y +
+           " Q" + (x + w) + "," + y + " " + (x + w) + "," + (y + r) +
+           " L" + (x + w) + "," + (y + h - r) +
+           " Q" + (x + w) + "," + (y + h) + " " + (x + w - r) + "," + (y + h) +
+           " L" + x + "," + (y + h) + " Z";
+  }
+
+  /* ---------------- tooltip ---------------- */
+  var tip = document.getElementById("tip");
+  function bindTip(node, html) {
+    function show(e) {
+      tip.innerHTML = html;
+      tip.style.opacity = "1";
+      var p = e.touches ? e.touches[0] : e;
+      var r = tip.getBoundingClientRect();
+      var x = Math.min(Math.max(8, p.clientX - r.width / 2), window.innerWidth - r.width - 8);
+      var y = p.clientY - r.height - 12;
+      if (y < 8) y = p.clientY + 16;
+      tip.style.left = x + "px"; tip.style.top = y + "px";
+    }
+    node.addEventListener("mouseenter", show);
+    node.addEventListener("mousemove", show);
+    node.addEventListener("mouseleave", function () { tip.style.opacity = "0"; });
+    node.addEventListener("touchstart", show, { passive: true });
+    node.addEventListener("touchend", function () { setTimeout(function () { tip.style.opacity = "0"; }, 1400); });
+  }
+
+  /* ---------------- acuity binning ---------------- */
+  // ordered easiest-to-see first; index 0 is best vision
+  var ACUITY_BINS = [
+    { label: "6/6 – 6/7.5",   test: function (lm) { return lm <= 0.101; } },
+    { label: "6/9 – 6/12",    test: function (lm) { return lm <= 0.301; } },
+    { label: "6/18 – 6/24",   test: function (lm) { return lm <= 0.601; } },
+    { label: "6/36 – 6/60",   test: function (lm) { return lm <= 1.001; } },
+    { label: "Worse than 6/60", test: function () { return true; } }
+  ];
+
+  function bestPerPerson(rows) {
+    // one entry per camp ID, keeping the best (lowest) logMAR recorded
+    var best = {};
+    rows.forEach(function (r) {
+      if (r.mode && r.mode.toLowerCase().indexOf("acuity") === -1) return;
+      var id = r.pid || "(unnamed)";
+      var lm = parseFloat(r.logmar);
+      if (isNaN(lm)) {
+        // "worse than 6/60" rows carry no logMAR
+        if ((r.result || "").toLowerCase().indexOf("worse than") === 0) lm = 1.2;
+        else return;
+      }
+      if (!(id in best) || lm < best[id]) best[id] = lm;
+    });
+    return best;
+  }
+
+  /* ---------------- render ---------------- */
+  function render() {
+    var hasA = acuityRows && acuityRows.length;
+    var hasT = triageRows && triageRows.length;
+    if (!hasA && !hasT) { document.getElementById("report").style.display = "none"; return; }
+    document.getElementById("report").style.display = "block";
+    document.getElementById("sample-banner").style.display = isSample ? "block" : "none";
+
+    var best = hasA ? bestPerPerson(acuityRows) : {};
+    var acuityIds = Object.keys(best);
+
+    var bandCount = { routine: 0, soon: 0, today: 0 };
+    var triageIds = {};
+    if (hasT) triageRows.forEach(function (r) {
+      var b = (r.band || "").toLowerCase();
+      if (b in bandCount) bandCount[b]++;
+      if (r.pid) triageIds[r.pid] = true;
+    });
+
+    var everyone = {};
+    acuityIds.forEach(function (i) { everyone[i] = true; });
+    Object.keys(triageIds).forEach(function (i) { everyone[i] = true; });
+    var total = Object.keys(everyone).length;
+
+    // referral = triage soon/today, or acuity worse than 6/12
+    var referred = {};
+    if (hasT) triageRows.forEach(function (r) {
+      var b = (r.band || "").toLowerCase();
+      if ((b === "soon" || b === "today") && r.pid) referred[r.pid] = true;
+    });
+    acuityIds.forEach(function (id) { if (best[id] > 0.301) referred[id] = true; });
+    var referCount = Object.keys(referred).length;
+
+    document.getElementById("k-total").textContent = total;
+    document.getElementById("k-refer").textContent = referCount;
+    document.getElementById("k-refer-l").textContent =
+      total ? "flagged for referral (" + Math.round(referCount / total * 100) + "%)" : "flagged for referral";
+    document.getElementById("k-today").textContent = bandCount.today;
+
+    var dates = [];
+    (acuityRows || []).concat(triageRows || []).forEach(function (r) {
+      if (r.when) { var d = new Date(r.when); if (!isNaN(d)) dates.push(d); }
+    });
+    dates.sort(function (a, b) { return a - b; });
+    document.getElementById("report-sub").textContent = dates.length
+      ? dates[0].toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) +
+        (dates[0].toDateString() !== dates[dates.length - 1].toDateString()
+          ? " to " + dates[dates.length - 1].toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "")
+      : "No dates in the data";
+
+    renderPriority(bandCount, hasT);
+    renderAcuity(best, hasA);
+    renderReasons(hasT);
+    renderUrgent(best, hasT);
+  }
+
+  /* --- priority: one part-to-whole bar, 3 ordinal states --- */
+  function renderPriority(counts, hasT) {
+    var card = document.getElementById("card-priority");
+    card.style.display = hasT ? "block" : "none";
+    if (!hasT) return;
+
+    var host = document.getElementById("chart-priority");
+    host.innerHTML = "";
+    var total = BANDS.reduce(function (s, b) { return s + counts[b.key]; }, 0);
+    if (!total) { host.innerHTML = '<div class="empty">No triage records.</div>'; return; }
+
+    var W = 800, H = 62, BAR = 24, GAP = 2, y = 8;
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+                          "aria-label": "Referral priority, " + total + " people" });
+
+    var x = 0;
+    var segs = BANDS.filter(function (b) { return counts[b.key] > 0; });
+    var widthFor = function (n) { return (n / total) * (W - GAP * Math.max(0, segs.length - 1)); };
+
+    segs.forEach(function (b, i) {
+      var w = widthFor(counts[b.key]);
+      var first = i === 0, last = i === segs.length - 1;
+      var d = (first && last) ? barPath(x, y, w, BAR, 4, "right")
+            : last ? barPath(x, y, w, BAR, 4, "right")
+            : "M" + x + "," + y + " h" + w + " v" + BAR + " h" + (-w) + " Z";
+      var p = el("path", { d: d, fill: b.color, class: "bar-seg" });
+      var pct = Math.round(counts[b.key] / total * 100);
+      bindTip(p, "<b>" + b.label + "</b><br>" + counts[b.key] + " of " + total + " · " + pct + "%");
+      svg.appendChild(p);
+
+      // direct label under the segment, only when it fits
+      var lab = b.label + " " + counts[b.key];
+      if (w > lab.length * 6.4) {
+        svg.appendChild(txt("text", { x: x, y: y + BAR + 17, class: "val-label" }, lab));
+      }
+      x += w + GAP;
+    });
+
+    host.appendChild(svg);
+
+    var lg = document.getElementById("legend-priority");
+    lg.innerHTML = "";
+    BANDS.forEach(function (b) {
+      var d = document.createElement("div");
+      d.className = "item";
+      d.innerHTML = '<span class="sw" style="background:' + b.color + '"></span>' +
+                    esc(b.label) + " — " + counts[b.key];
+      lg.appendChild(d);
+    });
+
+    var t = document.getElementById("table-priority");
+    t.innerHTML = "<tr><th>Priority</th><th class='num'>People</th><th class='num'>Share</th></tr>" +
+      BANDS.map(function (b) {
+        return "<tr><td><span class='pill " + b.key + "'><span class='dot' style='background:" + b.color +
+               "'></span>" + esc(b.label) + "</span></td><td class='num'>" + counts[b.key] +
+               "</td><td class='num'>" + Math.round(counts[b.key] / total * 100) + "%</td></tr>";
+      }).join("");
+  }
+
+  /* --- acuity: single-series column chart, ordered bins --- */
+  function renderAcuity(best, hasA) {
+    var card = document.getElementById("card-acuity");
+    card.style.display = hasA ? "block" : "none";
+    if (!hasA) return;
+
+    var counts = ACUITY_BINS.map(function () { return 0; });
+    Object.keys(best).forEach(function (id) {
+      var lm = best[id];
+      for (var i = 0; i < ACUITY_BINS.length; i++) {
+        if (ACUITY_BINS[i].test(lm)) { counts[i]++; break; }
+      }
+    });
+    var total = counts.reduce(function (a, b) { return a + b; }, 0);
+    var host = document.getElementById("chart-acuity");
+    host.innerHTML = "";
+    if (!total) { host.innerHTML = '<div class="empty">No acuity results.</div>'; return; }
+
+    var W = 800, PLOT = 190, PAD_L = 8, PAD_R = 8, AXIS = 42;
+    var H = PLOT + AXIS;
+    var max = Math.max.apply(null, counts);
+    var n = counts.length;
+    var band = (W - PAD_L - PAD_R) / n;
+    var BARW = Math.min(24, band * 0.42);
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+                          "aria-label": "Visual acuity distribution across " + total + " people" });
+
+    // hairline gridlines
+    [0, 0.5, 1].forEach(function (f) {
+      var gy = PLOT - f * PLOT;
+      svg.appendChild(el("line", { x1: 0, y1: gy, x2: W, y2: gy, class: "gridline" }));
+      if (f > 0) svg.appendChild(txt("text", { x: 0, y: gy - 5, class: "axis-label" }, Math.round(f * max)));
+    });
+
+    counts.forEach(function (c, i) {
+      var cx = PAD_L + band * i + band / 2;
+      var h = max ? (c / max) * PLOT : 0;
+      if (c > 0) {
+        var p = el("path", { d: barPath(cx - BARW / 2, PLOT - h, BARW, h, 4, "up"),
+                             fill: C.series, class: "bar-mark" });
+        bindTip(p, "<b>" + ACUITY_BINS[i].label + "</b><br>" + c + " of " + total +
+                   " · " + Math.round(c / total * 100) + "%");
+        svg.appendChild(p);
+        svg.appendChild(txt("text", { x: cx, y: PLOT - h - 7, class: "val-label", "text-anchor": "middle" }, c));
+      }
+      // x label, wrapped onto two lines
+      var words = ACUITY_BINS[i].label.split(" ");
+      var l1 = words.slice(0, 2).join(" "), l2 = words.slice(2).join(" ");
+      svg.appendChild(txt("text", { x: cx, y: PLOT + 18, class: "axis-label", "text-anchor": "middle" }, l1));
+      if (l2) svg.appendChild(txt("text", { x: cx, y: PLOT + 31, class: "axis-label", "text-anchor": "middle" }, l2));
+    });
+
+    host.appendChild(svg);
+
+    var t = document.getElementById("table-acuity");
+    t.innerHTML = "<tr><th>Acuity</th><th class='num'>People</th><th class='num'>Share</th></tr>" +
+      ACUITY_BINS.map(function (b, i) {
+        return "<tr><td>" + esc(b.label) + "</td><td class='num'>" + counts[i] +
+               "</td><td class='num'>" + Math.round(counts[i] / total * 100) + "%</td></tr>";
+      }).join("");
+  }
+
+  /* --- reasons: ranked horizontal bars, single series --- */
+  function renderReasons(hasT) {
+    var card = document.getElementById("card-reasons");
+    card.style.display = hasT ? "block" : "none";
+    if (!hasT) return;
+
+    var tally = {};
+    triageRows.forEach(function (r) {
+      [r.red_flags, r.other_flags].forEach(function (blob) {
+        if (!blob) return;
+        blob.split(";").forEach(function (f) {
+          f = f.trim();
+          if (f) tally[f] = (tally[f] || 0) + 1;
+        });
+      });
+    });
+    var items = Object.keys(tally).map(function (k) { return { k: k, v: tally[k] }; })
+                      .sort(function (a, b) { return b.v - a.v; }).slice(0, 8);
+
+    var host = document.getElementById("chart-reasons");
+    host.innerHTML = "";
+    if (!items.length) { host.innerHTML = '<div class="empty">Nothing was flagged.</div>'; return; }
+
+    var W = 800, ROW = 38, BAR = 20, LABEL_W = 320, PAD_R = 46;
+    var H = items.length * ROW;
+    var max = items[0].v;
+    var plotW = W - LABEL_W - PAD_R;
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+                          "aria-label": "Most common reasons for flagging" });
+
+    items.forEach(function (it, i) {
+      var y = i * ROW + (ROW - BAR) / 2;
+      var w = Math.max(2, (it.v / max) * plotW);
+      svg.appendChild(txt("text", { x: 0, y: y + BAR / 2 + 4, class: "axis-label" },
+                          it.k.length > 46 ? it.k.slice(0, 45) + "…" : it.k));
+      var p = el("path", { d: barPath(LABEL_W, y, w, BAR, 4, "right"), fill: C.series, class: "bar-mark" });
+      bindTip(p, "<b>" + esc(it.k) + "</b><br>" + it.v + " " + (it.v === 1 ? "person" : "people"));
+      svg.appendChild(p);
+      svg.appendChild(txt("text", { x: LABEL_W + w + 8, y: y + BAR / 2 + 4, class: "val-label" }, it.v));
+    });
+
+    host.appendChild(svg);
+
+    var t = document.getElementById("table-reasons");
+    t.innerHTML = "<tr><th>Reason</th><th class='num'>People</th></tr>" +
+      items.map(function (it) {
+        return "<tr><td>" + esc(it.k) + "</td><td class='num'>" + it.v + "</td></tr>";
+      }).join("");
+  }
+
+  /* --- urgent list --- */
+  function renderUrgent(best, hasT) {
+    var card = document.getElementById("card-urgent");
+    var t = document.getElementById("table-urgent");
+    if (!hasT) { card.style.display = "none"; return; }
+    card.style.display = "block";
+
+    var rows = triageRows.filter(function (r) { return (r.band || "").toLowerCase() === "today"; });
+    if (!rows.length) {
+      t.innerHTML = "";
+      card.querySelector(".scroller").innerHTML =
+        '<div class="empty">No same-day referrals. Nobody reported an urgent symptom.</div>';
+      return;
+    }
+    t.innerHTML = "<tr><th>Camp ID</th><th>Age</th><th>Urgent symptom</th><th>Acuity</th></tr>" +
+      rows.map(function (r) {
+        var lm = best[r.pid];
+        var ac = (lm === undefined) ? "not tested"
+               : (lm > 1.001 ? "worse than 6/60" : "6/" + Math.round(6 * Math.pow(10, lm)));
+        return "<tr><td><b>" + esc(r.pid) + "</b></td><td>" + esc(r.age || "—") + "</td><td>" +
+               esc(r.red_flags || "—") + "</td><td>" + esc(ac) + "</td></tr>";
+      }).join("");
+  }
+
+  /* ---------------- file loading ---------------- */
+  function wire(inputId, dropId, descId, setter, label) {
+    var input = document.getElementById(inputId);
+    var drop = document.getElementById(dropId);
+    input.addEventListener("change", function () {
+      var f = input.files && input.files[0];
+      if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var rows = parseCSV(String(rd.result));
+          if (!rows.length) { alert("That file has no rows in it."); return; }
+          setter(rows);
+          isSample = false;
+          drop.classList.add("loaded");
+          document.getElementById(descId).textContent = f.name + " — " + rows.length + " rows";
+          render();
+        } catch (e) {
+          alert("Could not read that file as a CSV.");
+        }
+      };
+      rd.readAsText(f);
+    });
+  }
+  wire("f-acuity", "drop-acuity", "d-acuity", function (r) { acuityRows = r; }, "screening");
+  wire("f-triage", "drop-triage", "d-triage", function (r) { triageRows = r; }, "triage");
+
+  document.getElementById("reset").addEventListener("click", function () {
+    acuityRows = triageRows = null; isSample = false;
+    ["drop-acuity", "drop-triage"].forEach(function (i) { document.getElementById(i).classList.remove("loaded"); });
+    document.getElementById("d-acuity").textContent = "visionfirst-camp-….csv";
+    document.getElementById("d-triage").textContent = "visionfirst-triage-….csv";
+    document.getElementById("f-acuity").value = "";
+    document.getElementById("f-triage").value = "";
+    document.getElementById("report").style.display = "none";
+  });
+
+  /* ---------------- sample data ---------------- */
+  function makeSample() {
+    var N = 96;
+    var acu = [], tri = [];
+    var ages = ["Under 15", "15–39", "40–59", "60+"];
+    var red = ["Sudden loss of vision", "Painful red eye or headache with vomiting",
+               "Recent eye injury or chemical exposure", "Curtain, shadow, flashes or floaters"];
+    var other = ["Gradual clouding with night glare", "Diabetes without a recent eye examination",
+                 "Family history of glaucoma", "Wears glasses, not tested in 2 years or more",
+                 "Child reports difficulty seeing the blackboard", "Previous eye surgery or injection"];
+    var day = new Date(); day.setHours(9, 0, 0, 0);
+
+    for (var i = 1; i <= N; i++) {
+      var id = "Camp-" + String(i).padStart(3, "0");
+      var when = new Date(day.getTime() + i * 4 * 60000).toISOString();
+      var age = ages[Math.floor(Math.pow(Math.random(), 0.8) * ages.length)];
+
+      // acuity skewed toward good vision, with a long tail
+      var u = Math.random();
+      var lm = u < 0.45 ? (Math.random() * 0.10)          // normal
+             : u < 0.73 ? (0.10 + Math.random() * 0.20)   // 6/9 – 6/12
+             : u < 0.91 ? (0.30 + Math.random() * 0.30)   // 6/18 – 6/24
+             : u < 0.98 ? (0.60 + Math.random() * 0.40)   // 6/36 – 6/60
+             : (1.01 + Math.random() * 0.20);             // worse
+      lm = Math.round(lm * 100) / 100;
+      acu.push({ when: when, pid: id, eye: "Both", mode: "Visual acuity", distance: "3 m",
+                 result: "6/" + Math.round(6 * Math.pow(10, lm)), logmar: lm.toFixed(2),
+                 farpoint: "", flag: lm > 0.3 ? "refer" : "pass", crowded: "yes",
+                 trials: 14 + Math.floor(Math.random() * 9), reversals: 6,
+                 rt: 1400 + Math.floor(Math.random() * 2600) });
+
+      // triage
+      var flagsR = [], flagsO = [];
+      if (Math.random() < 0.04) flagsR.push(red[Math.floor(Math.random() * red.length)]);
+      var nOther = Math.random() < 0.26 ? 1 + (Math.random() < 0.25 ? 1 : 0) : 0;
+      var pool = other.slice();
+      for (var j = 0; j < nOther; j++) pool.splice(Math.floor(Math.random() * pool.length), 1).forEach(function (f) { flagsO.push(f); });
+      if ((age === "40–59" || age === "60+") && lm > 0.3 && Math.random() < 0.6) {
+        flagsO.push("Age " + age + " with a vision complaint");
+      }
+      var band = flagsR.length ? "today" : (flagsO.length ? "soon" : "routine");
+      tri.push({ when: when, pid: id, age: age, band: band,
+                 complaints: lm > 0.3 ? "Blurred distance vision" : "",
+                 red_flags: flagsR.join("; "), other_flags: flagsO.join("; "),
+                 glasses: Math.random() < 0.3 ? "Wears, not tested 2+ years" : "Never worn" });
+    }
+    return { acu: acu, tri: tri };
+  }
+
+  document.getElementById("sample").addEventListener("click", function () {
+    var s = makeSample();
+    acuityRows = s.acu; triageRows = s.tri; isSample = true;
+    document.getElementById("d-acuity").textContent = "sample — " + s.acu.length + " rows";
+    document.getElementById("d-triage").textContent = "sample — " + s.tri.length + " rows";
+    document.getElementById("drop-acuity").classList.add("loaded");
+    document.getElementById("drop-triage").classList.add("loaded");
+    render();
+    document.getElementById("report").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  /* ---------------- outputs ---------------- */
+  document.getElementById("print").addEventListener("click", function () { window.print(); });
+
+  document.getElementById("copy-summary").addEventListener("click", function () {
+    var lines = [];
+    lines.push("VisionFirst camp report" + (isSample ? " (SAMPLE DATA — not a real camp)" : ""));
+    lines.push(document.getElementById("report-sub").textContent);
+    lines.push("");
+    lines.push("Screened: " + document.getElementById("k-total").textContent);
+    lines.push("Flagged for referral: " + document.getElementById("k-refer").textContent);
+    lines.push("Same-day referrals: " + document.getElementById("k-today").textContent);
+    var pr = document.getElementById("table-priority").innerText;
+    if (pr) { lines.push(""); lines.push("Referral priority"); lines.push(pr.trim()); }
+    var ac = document.getElementById("table-acuity").innerText;
+    if (ac) { lines.push(""); lines.push("Visual acuity"); lines.push(ac.trim()); }
+    var rs = document.getElementById("table-reasons").innerText;
+    if (rs) { lines.push(""); lines.push("Reasons flagged"); lines.push(rs.trim()); }
+    var out = lines.join("\n");
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(out).then(function () { alert("Summary copied."); })
+        .catch(function () { window.prompt("Copy this summary:", out); });
+    } else window.prompt("Copy this summary:", out);
+  });
+
+})();
+</script>
+
+</body>
+</html>
